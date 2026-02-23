@@ -1,0 +1,6 @@
+Food|Egg|50|3000
+Toy|Car|2|150000
+Food|Beef|2|80000
+Food|Beef|12|12000
+test|testname|12|0
+Game|robux|1200|20000
