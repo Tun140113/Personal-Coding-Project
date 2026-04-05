@@ -40,7 +40,7 @@ def add_sessions():
                 os.system("cls")
     
     with open("sessions.txt", "a", encoding="utf-8") as file:
-        file.write(f"{subjectINPUT}-{learningtime}")
+        file.write(f"{subjectINPUT}-{learningtime}\n")
     
 
     print(f"Added {subjectINPUT} --- Using {learningtime}")
