@@ -1,3 +1,4 @@
+# =====================Library==================
 import os
 import shutil
 import time
@@ -7,7 +8,7 @@ from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 import subprocess
 import random
-
+# ================= TAKING TERMINAL SIZE ==============
 def clear():
     os.system("cls" if os.name == "nt" else "clear")
 
