@@ -232,7 +232,18 @@ def stats():
         print("No sessions found 😭")
         input()
 
+# ================== BEWARE! ===============
+def reset():
 
+
+    file_path = "sessions.txt"
+
+    # Check if file exists to avoid FileNotFoundError
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+        print("File deleted.")
+    else:
+        print("File not found.")
 # ================== MENU ==================
 def menu():
     clear()
@@ -273,9 +284,23 @@ def menu():
         elif choice == "rl":
             clear()
             progress_bar(1)
-            
-            
             subprocess.run(["python", "study_tracker.py"])
+        
+        elif choice == "del":
+            print("Do you really want to reset the data? ALL DATA WILL BE LOST!".center(width))
+            # Thêm .lower() ngay tại input để xử lý cả 'Y' và 'y'
+            user_confirm = input("MY CHOICE (y/n): ").lower() 
+            
+            if user_confirm == "y":
+                reset()
+                print("Data has been reset!".center(width))
+            else:
+                print("Phew! That was close. Nice choice!".center(width))
+                return
+
+            
+            
+
 
         else:
             print("Invalid choice")
