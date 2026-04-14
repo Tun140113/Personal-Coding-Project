@@ -1,5 +1,2 @@
-Math|120
-math|120
-math|120
-english|120
-math|120
+Math|140
+English|60

@@ -6,7 +6,11 @@ from datetime import datetime
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 
+def clear():
+    os.system("cls" if os.name == "nt" else "clear")
+
 width = shutil.get_terminal_size().columns
+
 # ================== CHECK FOR EXISTED ============
 def checking_for_exists(subject):
     try: 
@@ -18,53 +22,101 @@ def checking_for_exists(subject):
                 saved_subject, _ = line.strip().split("|")
                 
                 if saved_subject.lower() == subject.lower():
-                    return True   # 🔥 TRẢ VỀ NGAY
+                    return True
 
     except FileNotFoundError:
         return False
 
     return False
-        
-               
+
+
 # ================== ADD SESSION ==================
 def add_sessions():
     while True:
         print("Enter your Subject".center(width))
-        subject = input(">>>").strip()
-       
+        subject = input(">>> ").strip()
 
         if subject == "" or " " in subject:
             print("Subject must not be empty or contain spaces!")
             input()
-            os.system("cls")
+            clear()
+            continue
 
         if checking_for_exists(subject):
-            os.system("cls")
+            clear()
             print("❌ Subject already exists!".center(width))
-            input()
-            os.system("cls")
-            continue
-        
+
+            print(f'1. Re-enter new subject (not "{subject}")')
+            print(f"2. Add more time to '{subject}'")
+            print("3. Cancel")
+
+            while True:
+                choice = input(">>> ")
+                if choice in ["1", "2", "3"]:
+                    break
+                print("Invalid choice!")
+
+            if choice == "1":
+                clear()
+                continue
+
+            elif choice == "2":
+                while True:
+                    try:
+                        extra_time = int(input("Enter extra minutes: "))
+                        break
+                    except ValueError:
+                        print("Must be a number!")
+
+                updated_sessions = []
+
+                with open("sessions.txt", "r", encoding="utf-8") as file:
+                    for line in file:
+                        if not line.strip():
+                            continue
+
+                        saved_subject, minutes = line.strip().split("|")
+                        minutes = int(minutes)
+
+                        if saved_subject.lower() == subject.lower():
+                            minutes += extra_time
+
+                        updated_sessions.append((saved_subject, minutes))
+
+                with open("sessions.txt", "w", encoding="utf-8") as file:
+                    for s, m in updated_sessions:
+                        file.write(f"{s}|{m}\n")
+
+                print("✅ Time added successfully!")
+                input()
+                clear()
+                return
+
+            else:
+                clear()
+                return
+
         break
 
     while True:
         print(f"Enter time for '{subject}' (minutes)")
         try:
-            minutes = int(input(">>>"))
+            minutes = int(input(">>> "))
             break
         except ValueError:
             print("Must be a number!")
             time.sleep(1)
-            os.system("cls")
+            clear()
 
     with open("sessions.txt", "a", encoding="utf-8") as file:
         file.write(f"{subject}|{minutes}\n")
 
     print(f"Added: {subject} | {minutes} min")
     input()
-    os.system("cls")
+    clear()
 
-#================== DELETE ================
+
+# ================== DELETE =================
 def del_sessions():
     try: 
         table = PrettyTable()
@@ -80,12 +132,10 @@ def del_sessions():
                 subject, minutes = line.strip().split("|")
                 sessions.append((subject, minutes))
                 table.add_row([subject, int(minutes)])
-            print(table)
-        # Questioning user 
-            del_subject = input("Enter name of subject to remove: ")
 
+        print(table)
+        del_subject = input("Enter name of subject to remove: ")
 
-        #Resolve the list(remove)
         new_sessions = []
         found = False
 
@@ -94,19 +144,22 @@ def del_sessions():
                 new_sessions.append((subject, minutes))
             else: 
                 found = True 
+
         if not found: 
             print("❌ Subject not found!")
-        elif found: 
-            #rewrite the file
+        else: 
             with open("sessions.txt", "w", encoding="utf-8") as file: 
                 for subject, minutes in new_sessions:
                     file.write(f"{subject}|{minutes}\n")
             print("✅ Deleted successfully!")
+
+        input()
+        clear()
+
     except FileNotFoundError:
         print("File doesn't exist!")
         input()
 
-            
 
 # ================== VIEW ==================
 def view_sessions():
@@ -124,13 +177,14 @@ def view_sessions():
 
         print(table)
         input()
+        clear()
 
     except FileNotFoundError:
         print("No data yet 😴")
         input()
 
 
-# ================== STATS + GRAPH ==================
+# ================== STATS ==================
 def stats():
     subjects = {}
 
@@ -141,6 +195,7 @@ def stats():
                     continue
 
                 subject, minutes = line.strip().split("|")
+                subject = subject.lower()
                 minutes = int(minutes)
 
                 if subject in subjects:
@@ -157,11 +212,9 @@ def stats():
         y = list(subjects.values())
 
         plt.bar(x, y)
-
         plt.title("Study Progress")
         plt.xlabel("Subjects")
         plt.ylabel("Minutes")
-
         plt.show()
 
     except FileNotFoundError:
@@ -184,28 +237,30 @@ def menu():
         choice = input(">>> ")
 
         if choice == "1":
-            os.system("cls")
+            clear()
             add_sessions()
 
         elif choice == "2":
-            os.system("cls")
+            clear()
             view_sessions()
 
         elif choice == "3":
-            os.system("cls")
+            clear()
             stats()
+
         elif choice == "4":
-            os.system("cls")
+            clear()
             del_sessions()
 
         elif choice == "5":
             print("Bye 👋")
             sys.exit()
+        
 
         else:
             print("Invalid choice")
             time.sleep(1)
-            os.system("cls")
+            clear()
 
 
 menu()
