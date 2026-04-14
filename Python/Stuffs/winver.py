@@ -1,2 +1,2 @@
-import os
-for i in range
+from winrt.windows.security.credentials.ui import UserConsentVerifier
+print("OK")

@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản Lý Điểm Số — THCS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --bg3: #1a1a24;
+  --card: #16161f;
+  --card2: #1e1e2a;
+  --border: #2a2a3a;
+  --accent: #7c6af7;
+  --accent2: #a78bfa;
+  --accent3: #06d6a0;
+  --accent4: #f72585;
+  --accent5: #ffd166;
+  --text: #e8e6f0;
+  --text2: #9492a8;
+  --text3: #5f5d72;
+  --success: #06d6a0;
+  --warning: #ffd166;
+  --danger: #f72585;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-head);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+/* === NOISE OVERLAY === */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* === LAYOUT === */
+.app-shell { display: flex; min-height: 100vh; }
+
+/* === SIDEBAR === */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  z-index: 100;
+  padding: 0 0 16px 0;
+  transition: transform 0.3s ease;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.sidebar-logo .logo-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 6px;
+}
+.sidebar-logo .logo-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  line-height: 1.3;
+}
+.sidebar-logo .logo-sub {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.sidebar-student {
+  padding: 12px 20px;
+  background: var(--card);
+  margin: 0 12px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.sidebar-student .s-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-student .s-class {
+  font-size: 10px;
+  color: var(--accent3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+.nav-group { flex: 1; overflow-y: auto; }
+.nav-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 12px 20px 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  position: relative;
+}
+.nav-item:hover { color: var(--text); background: var(--card); }
+.nav-item.active {
+  color: var(--accent2);
+  background: linear-gradient(90deg, rgba(124,106,247,0.12) 0%, transparent 100%);
+  border-left-color: var(--accent);
+}
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.btn-reset {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* === MAIN CONTENT === */
+.main-content {
+  margin-left: 220px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.topbar-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.semester-toggle {
+  display: flex;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sem-btn {
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  transition: all 0.2s;
+}
+.sem-btn.active { background: var(--accent); color: white; }
+.page-content { padding: 28px 32px; flex: 1; }
+
+/* === CARDS === */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+/* === GRID LAYOUTS === */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+/* === STAT CARDS === */
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.stat-card.purple::before { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.stat-card.green::before { background: linear-gradient(90deg, var(--accent3), #38bdf8); }
+.stat-card.pink::before { background: linear-gradient(90deg, var(--accent4), #fb923c); }
+.stat-card.yellow::before { background: linear-gradient(90deg, var(--accent5), #f97316); }
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: var(--font-mono);
+}
+.stat-value.purple { color: var(--accent2); }
+.stat-value.green { color: var(--accent3); }
+.stat-value.pink { color: var(--accent4); }
+.stat-value.yellow { color: var(--accent5); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 6px; font-family: var(--font-mono); }
+
+/* === SUBJECT TABLE === */
+.subject-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.subject-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+.subject-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.subject-table tr:last-child td { border-bottom: none; }
+.subject-table tr:hover td { background: rgba(124,106,247,0.05); }
+.subject-name-cell {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+.score-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.score-badge.excellent { background: rgba(6,214,160,0.15); color: var(--accent3); }
+.score-badge.good { background: rgba(124,106,247,0.15); color: var(--accent2); }
+.score-badge.avg { background: rgba(255,209,102,0.15); color: var(--accent5); }
+.score-badge.bad { background: rgba(247,37,133,0.15); color: var(--accent4); }
+
+/* === RANKING BADGE === */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.rank-badge.xuat-sac { background: linear-gradient(135deg, rgba(6,214,160,0.2), rgba(56,189,248,0.2)); border: 1px solid var(--accent3); color: var(--accent3); }
+.rank-badge.gioi { background: linear-gradient(135deg, rgba(124,106,247,0.2), rgba(167,139,250,0.2)); border: 1px solid var(--accent); color: var(--accent2); }
+.rank-badge.kha { background: linear-gradient(135deg, rgba(255,209,102,0.2), rgba(249,115,22,0.2)); border: 1px solid var(--accent5); color: var(--accent5); }
+.rank-badge.tb { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text2); }
+
+/* === PROGRESS BAR === */
+.progress-wrap { width: 100%; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* === ALERT/TOAST === */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 340px;
+}
+.toast {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  box-shadow: var(--shadow);
+  animation: toastIn 0.3s ease;
+  border-left: 3px solid var(--accent);
+}
+.toast.warn { border-left-color: var(--warning); }
+.toast.danger { border-left-color: var(--danger); }
+.toast.success { border-left-color: var(--success); }
+.toast-icon { font-size: 16px; margin-top: 1px; }
+.toast-msg { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.toast-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+@keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* === FORMS === */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+.form-select option { background: var(--bg2); }
+.form-hint { font-size: 10px; color: var(--text3); margin-top: 4px; font-family: var(--font-mono); }
+.live-preview {
+  background: var(--bg3);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent2);
+  font-weight: 700;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* === BUTTONS === */
+.btn {
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,106,247,0.4); }
+.btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent2); }
+.btn-success { background: rgba(6,214,160,0.15); color: var(--accent3); border: 1px solid var(--accent3); }
+.btn-danger { background: rgba(247,37,133,0.15); color: var(--accent4); border: 1px solid var(--accent4); }
+.btn-warning { background: rgba(255,209,102,0.15); color: var(--accent5); border: 1px solid var(--accent5); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+
+/* === ONBOARDING MODAL === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  width: 480px;
+  max-width: 95vw;
+  box-shadow: 0 32px 64px rgba(0,0,0,0.7);
+  animation: fadeUp 0.4s ease;
+}
+@keyframes fadeUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent3));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.modal-sub { font-size: 13px; color: var(--text3); margin-bottom: 28px; font-family: var(--font-mono); }
+
+/* === EXAM CARDS === */
+.exam-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s;
+}
+.exam-card:hover { border-color: var(--accent); }
+.exam-card.urgent { border-left: 3px solid var(--danger); background: rgba(247,37,133,0.06); }
+.exam-date-box {
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  min-width: 52px;
+}
+.exam-date-day { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent2); line-height: 1; }
+.exam-date-month { font-size: 9px; text-transform: uppercase; color: var(--text3); letter-spacing: 0.1em; }
+.exam-info-name { font-size: 13px; font-weight: 700; }
+.exam-info-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; }
+.exam-type-badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.type-tx { background: rgba(124,106,247,0.15); color: var(--accent2); }
+.type-gk { background: rgba(255,209,102,0.15); color: var(--accent5); }
+.type-ck { background: rgba(247,37,133,0.15); color: var(--accent4); }
+
+/* === FOCUS SUGGESTION === */
+.focus-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--card2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.focus-gap { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: var(--accent4); width: 48px; text-align: center; }
+.focus-info-name { font-size: 13px; font-weight: 700; }
+.focus-info-meta { font-size: 11px; color: var(--text3); font-family: var(--font-mono); margin-top: 2px; }
+.priority-badge {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.priority-focus { background: rgba(247,37,133,0.15); color: var(--accent4); border: 1px solid rgba(247,37,133,0.3); }
+.priority-ok { background: rgba(6,214,160,0.1); color: var(--accent3); border: 1px solid rgba(6,214,160,0.2); }
+
+/* === TIMELINE === */
+.timeline {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 16px 0 8px;
+}
+.timeline-stop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  position: relative;
+}
+.timeline-stop:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: -2px;
+  width: 8px;
+  height: 2px;
+  background: var(--border);
+}
+.timeline-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  border: 2px solid;
+}
+.tl-tx { border-color: var(--accent); background: rgba(124,106,247,0.15); color: var(--accent2); }
+.tl-gk { border-color: var(--accent5); background: rgba(255,209,102,0.15); color: var(--accent5); }
+.tl-ck { border-color: var(--accent4); background: rgba(247,37,133,0.15); color: var(--accent4); }
+.tl-upcoming { box-shadow: 0 0 12px currentColor; }
+.timeline-label { font-size: 9px; text-align: center; color: var(--text3); font-family: var(--font-mono); }
+.timeline-date { font-size: 8px; color: var(--text3); font-family: var(--font-mono); }
+
+/* === GOAL TRACKER === */
+.goal-row {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.goal-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.goal-subject-name { font-size: 14px; font-weight: 700; }
+.goal-scores { font-family: var(--font-mono); font-size: 12px; color: var(--text3); }
+.goal-progress-row { display: flex; align-items: center; gap: 10px; }
+.goal-progress-wrap { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.goal-progress-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.goal-pct { font-family: var(--font-mono); font-size: 11px; color: var(--text3); min-width: 36px; text-align: right; }
+.goal-input-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.goal-input {
+  width: 80px;
+  padding: 6px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+}
+.goal-input:focus { border-color: var(--accent); }
+
+/* === CHARTS === */
+.chart-wrap { position: relative; width: 100%; }
+
+/* === COMPARISON TABLE === */
+.compare-table { width: 100%; border-collapse: collapse; }
+.compare-table th {
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.compare-table td {
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.trend-up { color: var(--accent3); }
+.trend-down { color: var(--accent4); }
+.trend-same { color: var(--text3); }
+
+/* === PAGE TRANSITIONS === */
+.page { display: none; animation: fadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* === SECTION SPACING === */
+.section { margin-bottom: 24px; }
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* === EMPTY STATE === */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+}
+.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state .empty-title { font-size: 14px; font-weight: 700; color: var(--text2); margin-bottom: 4px; }
+.empty-state .empty-sub { font-size: 12px; font-family: var(--font-mono); }
+
+/* === SEMESTER HK2 MULTIPLIER NOTE === */
+.formula-note {
+  background: rgba(124,106,247,0.08);
+  border: 1px solid rgba(124,106,247,0.2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  margin-bottom: 16px;
+}
+.formula-note strong { color: var(--accent2); }
+
+/* === MOBILE TOGGLE === */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px;
+}
+@media (max-width: 768px) {
+  .hamburger { display: block; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: none; }
+  .main-content { margin-left: 0; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .page-content { padding: 16px; }
+  .topbar { padding: 12px 16px; }
+}
+
+/* === DIVIDER === */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* Accent glow on selected cards */
+.card.glow { box-shadow: 0 0 32px rgba(124,106,247,0.12); }
+
+/* Gradient text */
+.grad-text {
+  background: linear-gradient(135deg, var(--accent2), var(--accent3));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING MODAL -->
+<div class="modal-overlay" id="onboarding">
+  <div class="modal-box">
+    <div class="modal-title">👋 Chào mừng!</div>
+    <div class="modal-sub">Thiết lập thông tin học sinh lần đầu. Sẽ không hỏi lại đâu nha bro 😄</div>
+    <div class="form-group">
+      <label class="form-label">Họ và tên</label>
+      <input class="form-input" id="ob-name" placeholder="Nguyễn Văn Noẹt" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Lớp</label>
+      <input class="form-input" id="ob-class" placeholder="7A1" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Trường</label>
+      <input class="form-input" id="ob-school" placeholder="THCS Ngô Sĩ Liên" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Thành phố / Quốc gia</label>
+      <input class="form-input" id="ob-city" placeholder="Hồ Chí Minh, Việt Nam" />
+    </div>
+    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px;" onclick="saveOnboarding()">🚀 Bắt đầu nào!</button>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">📊</span>
+      <div class="logo-title">Grade Manager</div>
+      <div class="logo-sub">THCS Vietnam — v1.0</div>
+    </div>
+    <div class="sidebar-student" id="sidebar-student">
+      <div class="s-name" id="s-name">Loading...</div>
+      <div class="s-class" id="s-class">—</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Trang chính</div>
+      <a class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard">
+        <span class="nav-icon">🏠</span> Dashboard
+      </a>
+      <a class="nav-item" onclick="showPage('grades')" data-page="grades">
+        <span class="nav-icon">✏️</span> Nhập điểm
+      </a>
+      <div class="nav-label">Phân tích</div>
+      <a class="nav-item" onclick="showPage('charts')" data-page="charts">
+        <span class="nav-icon">📈</span> Biểu đồ
+      </a>
+      <a class="nav-item" onclick="showPage('goals')" data-page="goals">
+        <span class="nav-icon">🎯</span> Mục tiêu
+      </a>
+      <a class="nav-item" onclick="showPage('compare')" data-page="compare">
+        <span class="nav-icon">⚖️</span> So sánh HK
+      </a>
+      <div class="nav-label">Lịch thi</div>
+      <a class="nav-item" onclick="showPage('calendar')" data-page="calendar">
+        <span class="nav-icon">📅</span> Lịch kiểm tra
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-reset" onclick="confirmReset()">⚠️ Xóa toàn bộ dữ liệu</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-content">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="semester-toggle">
+          <button class="sem-btn active" id="sem-hk1" onclick="setSemester('HK1')">HK1</button>
+          <button class="sem-btn" id="sem-hk2" onclick="setSemester('HK2')">HK2</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- ===== PAGE: DASHBOARD ===== -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid-4 section" id="stats-grid"></div>
+        <div class="grid-2 section">
+          <div class="card glow">
+            <div class="card-header">
+              <div class="card-title">📚 Điểm trung bình các môn</div>
+              <span id="rank-badge-dash"></span>
+            </div>
+            <div id="subject-avg-table">
+              <div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Chưa có dữ liệu</div><div class="empty-sub">Nhập điểm ở trang "Nhập điểm" nhé bro</div></div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="card">
+              <div class="card-header"><div class="card-title">⏰ Thi sắp tới (7 ngày)</div></div>
+              <div id="upcoming-exams-dash">
+                <div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">Không có lịch thi</div><div class="empty-sub">Thêm lịch thi ở trang Lịch kiểm tra</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">💡 Focus gợi ý</div></div>
+              <div id="focus-suggestions">
+                <div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Chưa có gợi ý</div><div class="empty-sub">Đặt mục tiêu điểm để xem gợi ý</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: GRADES ===== -->
+      <div class="page" id="page-grades">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">✏️ Nhập / Chỉnh điểm</div></div>
+            <div class="formula-note">
+              <strong>Công thức:</strong> TB = [(TX1+TX2+TX3+TX4) + GK×2 + CK×3] / 10<br>
+              <strong>Năm học:</strong> (HK1×1 + HK2×2) / 3
+            </div>
+            <div class="form-group">
+              <label class="form-label">Môn học</label>
+              <select class="form-select" id="g-subject" onchange="loadExistingGrades()">
+                <option value="">-- Chọn môn --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Học kỳ</label>
+              <select class="form-select" id="g-sem" onchange="loadExistingGrades()">
+                <option value="HK1">Học kỳ 1</option>
+                <option value="HK2">Học kỳ 2</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">TX1 – TX4 <span style="color:var(--text3)">(cách nhau bằng dấu phẩy)</span></label>
+              <input class="form-input" id="g-tx" placeholder="8, 9, 7.5, 10" oninput="calcLivePreview()" />
+              <div class="form-hint">Ví dụ: 8, 9, 7.5, 10 → 4 cột TX tự động</div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">GK (×2)</label>
+                <input class="form-input" id="g-gk" placeholder="8.5" type="number" step="0.1" min="0" max="10" oninput="calcLivePreview()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CK (×3)</label>
+                <input class="form-input" id="g-ck" placeholder="9" type="number" step="0.1" min="0" max="10" oninput="calcLivePreview()" />
+              </div>
+            </div>
+            <div class="live-preview" id="live-preview">TB = —</div>
+            <div style="display:flex; gap:10px; margin-top:16px;">
+              <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveGrade()">💾 Lưu điểm</button>
+              <button class="btn btn-secondary" onclick="clearGradeForm()">✕ Xóa</button>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card">
+              <div class="card-header"><div class="card-title">📥 Import / Export Excel</div></div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div>
+                  <label class="form-label">Import từ Excel (.xlsx)</label>
+                  <input type="file" id="excel-import" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)" />
+                  <button class="btn btn-secondary" style="width:100%; justify-content:center;" onclick="document.getElementById('excel-import').click()">📂 Chọn file Excel</button>
+                  <div class="form-hint">Cột: Subject, HK, TX1, TX2, TX3, TX4, GK, CK</div>
+                </div>
+                <button class="btn btn-success" style="justify-content:center;" onclick="exportExcel()">📤 Xuất Excel</button>
+                <button class="btn btn-warning" style="justify-content:center;" onclick="exportPDF()">📄 Xuất PDF Báo cáo</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">➕ Thêm môn học mới</div></div>
+              <div class="form-group">
+                <label class="form-label">Tên môn</label>
+                <input class="form-input" id="new-subject-name" placeholder="VD: Toán, Văn, Anh..." />
+              </div>
+              <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="addSubject()">➕ Thêm môn</button>
+              <div class="divider"></div>
+              <div class="section-title">Môn học hiện tại</div>
+              <div id="subject-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: CHARTS ===== -->
+      <div class="page" id="page-charts">
+        <div class="section">
+          <div class="section-title">📈 Biểu đồ điểm theo môn</div>
+          <div class="form-group" style="max-width:240px;">
+            <label class="form-label">Chọn môn để xem biểu đồ</label>
+            <select class="form-select" id="chart-subject-sel" onchange="renderSubjectChart()">
+              <option value="">-- Chọn môn --</option>
+            </select>
+          </div>
+          <div class="card" id="subject-chart-card">
+            <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Chọn môn học</div><div class="empty-sub">để xem biểu đồ tiến trình điểm</div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">⚖️ So sánh HK1 vs HK2 — Tất cả môn</div>
+          <div class="card">
+            <div class="chart-wrap" style="height: 320px;">
+              <canvas id="compare-chart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">📊 Xu hướng điểm (% thay đổi HK1 → HK2)</div>
+          <div class="card" id="trend-table-card">
+            <div class="empty-state"><div class="empty-icon">📉</div><div class="empty-title">Chưa có đủ dữ liệu</div><div class="empty-sub">Cần có điểm cả HK1 lẫn HK2</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: GOALS ===== -->
+      <div class="page" id="page-goals">
+        <div class="formula-note">
+          🎯 <strong>Đặt mục tiêu</strong> cho từng môn. Hệ thống sẽ tự động gợi ý môn cần focus trên Dashboard.
+        </div>
+        <div id="goals-list">
+          <div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Chưa có môn học</div><div class="empty-sub">Thêm môn ở trang Nhập điểm trước nhé</div></div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: COMPARE ===== -->
+      <div class="page" id="page-compare">
+        <div class="section">
+          <div class="section-title">📋 Bảng so sánh HK1 / HK2 / Cả năm</div>
+          <div class="card">
+            <div id="compare-table-wrap">
+              <div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">Chưa có dữ liệu</div><div class="empty-sub">Nhập điểm ở trang Nhập điểm trước</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-title">📈 Biểu đồ so sánh cả năm</div>
+          <div class="card">
+            <div class="chart-wrap" style="height: 340px;">
+              <canvas id="yearly-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== PAGE: CALENDAR ===== -->
+      <div class="page" id="page-calendar">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">📅 Thêm lịch kiểm tra</div></div>
+            <div class="form-group">
+              <label class="form-label">Môn học</label>
+              <select class="form-select" id="exam-subject">
+                <option value="">-- Chọn môn --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ngày thi</label>
+              <input class="form-input" id="exam-date" type="date" />
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label">Loại bài</label>
+                <select class="form-select" id="exam-type">
+                  <option value="TX">Thường xuyên (TX)</option>
+                  <option value="GK">Giữa kỳ (GK)</option>
+                  <option value="CK">Cuối kỳ (CK)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Học kỳ</label>
+                <select class="form-select" id="exam-sem">
+                  <option value="HK1">HK1</option>
+                  <option value="HK2">HK2</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="addExam()">📅 Thêm lịch thi</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">🗓️ Timeline kiểm tra</div></div>
+            <div class="timeline" id="exam-timeline"></div>
+            <div class="divider"></div>
+            <div class="card-header" style="margin-bottom:0;"><div class="card-title">📋 Danh sách lịch thi</div></div>
+            <div id="exam-list" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<script>
+// =============================================
+// DATA MODEL
+// =============================================
+const DEFAULT_SUBJECTS = ["Toán","Ngữ văn","Tiếng Anh","KHTN","Lịch sử - Địa lý","GDCD","Công nghệ","Tin học","Âm nhạc","Mĩ thuật","Thể dục"];
+
+let appData = {
+  student: { name: "", class: "", school: "", city: "" },
+  subjects: [],
+  exams: []
+};
+
+let currentSemester = "HK1";
+let compareChartInstance = null;
+let subjectChartInstance = null;
+let yearlyChartInstance = null;
+
+// =============================================
+// STORAGE
+// =============================================
+function saveData() {
+  localStorage.setItem("gradeManagerData_v2", JSON.stringify(appData));
+}
+
+function loadData() {
+  const raw = localStorage.getItem("gradeManagerData_v2");
+  if (raw) {
+    try { appData = JSON.parse(raw); }
+    catch(e) { appData = { student:{name:"",class:"",school:"",city:""}, subjects:[], exams:[] }; }
+  }
+}
+
+// =============================================
+// ONBOARDING
+// =============================================
+function checkOnboarding() {
+  loadData();
+  if (!appData.student.name) {
+    document.getElementById("onboarding").style.display = "flex";
+  } else {
+    document.getElementById("onboarding").style.display = "none";
+    initApp();
+  }
+}
+
+function saveOnboarding() {
+  const name = document.getElementById("ob-name").value.trim();
+  const cls  = document.getElementById("ob-class").value.trim();
+  const sch  = document.getElementById("ob-school").value.trim();
+  const city = document.getElementById("ob-city").value.trim();
+  if (!name) { toast("Nhập tên đi bro! 😅", "warn"); return; }
+  appData.student = { name, class: cls, school: sch, city };
+  // Add default subjects
+  DEFAULT_SUBJECTS.forEach(s => {
+    if (!appData.subjects.find(x => x.name === s)) {
+      appData.subjects.push({ name: s, semesters: { HK1:{tx:[],gk:null,ck:null}, HK2:{tx:[],gk:null,ck:null} }, goal: null });
+    }
+  });
+  saveData();
+  document.getElementById("onboarding").style.display = "none";
+  toast(`Chào ${name}! 🎉 Sẵn sàng quản lý điểm rồi!`, "success");
+  initApp();
+}
+
+function confirmReset() {
+  if (confirm("⚠️ Xóa TOÀN BỘ dữ liệu? Không thể hoàn tác!")) {
+    localStorage.removeItem("gradeManagerData_v2");
+    location.reload();
+  }
+}
+
+// =============================================
+// INIT
+// =============================================
+function initApp() {
+  updateSidebarStudent();
+  populateSubjectSelects();
+  renderDashboard();
+  renderGoals();
+  renderCalendar();
+  renderCompare();
+  renderSubjectList();
+}
+
+function updateSidebarStudent() {
+  const s = appData.student;
+  document.getElementById("s-name").textContent = s.name || "—";
+  document.getElementById("s-class").textContent = [s.class, s.school].filter(Boolean).join(" · ") || "—";
+}
+
+function populateSubjectSelects() {
+  const names = appData.subjects.map(s => s.name);
+  ["g-subject","chart-subject-sel","exam-subject"].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">-- Chọn môn --</option>` + names.map(n => `<option value="${n}"${n===cur?" selected":""}>${n}</option>`).join("");
+  });
+}
+
+// =============================================
+// GRADE CALCULATION
+// =============================================
+function calcSubjectAvg(sem) {
+  if (!sem) return null;
+  const tx = sem.tx || [];
+  const gk = parseFloat(sem.gk);
+  const ck = parseFloat(sem.ck);
+  const validTX = tx.map(v => parseFloat(v)).filter(v => !isNaN(v));
+  if (validTX.length === 0 && isNaN(gk) && isNaN(ck)) return null;
+  const txSum = validTX.reduce((a,b) => a+b, 0);
+  const gkVal = isNaN(gk) ? 0 : gk;
+  const ckVal = isNaN(ck) ? 0 : ck;
+  const total = txSum + gkVal*2 + ckVal*3;
+  const divisor = validTX.length + 2 + 3;
+  if (divisor === 0) return null;
+  return Math.round((total / divisor) * 100) / 100;
+}
+
+function calcYearAvg(subj) {
+  const hk1 = calcSubjectAvg(subj.semesters?.HK1);
+  const hk2 = calcSubjectAvg(subj.semesters?.HK2);
+  if (hk1 === null && hk2 === null) return null;
+  if (hk1 === null) return hk2;
+  if (hk2 === null) return hk1;
+  return Math.round(((hk1 * 1 + hk2 * 2) / 3) * 100) / 100;
+}
+
+function calcOverallAvg(semester) {
+  const avgs = appData.subjects.map(s => {
+    if (semester === "year") return calcYearAvg(s);
+    return calcSubjectAvg(s.semesters?.[semester]);
+  }).filter(v => v !== null);
+  if (avgs.length === 0) return null;
+  return Math.round((avgs.reduce((a,b) => a+b, 0) / avgs.length) * 100) / 100;
+}
+
+function getRank(avg) {
+  if (avg === null) return null;
+  if (avg > 9.0) return { label: "Học sinh xuất sắc", short: "HSXS", cls: "xuat-sac" };
+  if (avg >= 8.0) return { label: "Học sinh giỏi", short: "HSG", cls: "gioi" };
+  if (avg >= 6.5) return { label: "Học sinh khá", short: "Khá", cls: "kha" };
+  return { label: "Trung bình", short: "TB", cls: "tb" };
+}
+
+function getScoreBadge(v) {
+  if (v === null) return `<span style="color:var(--text3); font-family:var(--font-mono)">—</span>`;
+  let cls = v >= 9 ? "excellent" : v >= 8 ? "good" : v >= 6.5 ? "avg" : "bad";
+  return `<span class="score-badge ${cls}">${v.toFixed(1)}</span>`;
+}
+
+// =============================================
+// LIVE PREVIEW
+// =============================================
+function calcLivePreview() {
+  const txRaw = document.getElementById("g-tx").value;
+  const gk = parseFloat(document.getElementById("g-gk").value);
+  const ck = parseFloat(document.getElementById("g-ck").value);
+  const txArr = txRaw.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+  const sem = { tx: txArr, gk: isNaN(gk) ? null : gk, ck: isNaN(ck) ? null : ck };
+  const avg = calcSubjectAvg(sem);
+  const el = document.getElementById("live-preview");
+  if (avg === null) { el.textContent = "TB = —"; el.style.color = "var(--text3)"; return; }
+  el.textContent = `TB = ${avg.toFixed(2)}`;
+  el.style.color = avg >= 8 ? "var(--accent3)" : avg >= 6.5 ? "var(--accent5)" : "var(--accent4)";
+}
+
+// =============================================
+// SAVE GRADE
+// =============================================
+function saveGrade() {
+  const subjectName = document.getElementById("g-subject").value;
+  const sem = document.getElementById("g-sem").value;
+  if (!subjectName) { toast("Chọn môn học trước đi bro! 😅", "warn"); return; }
+  const txRaw = document.getElementById("g-tx").value;
+  const gk = parseFloat(document.getElementById("g-gk").value);
+  const ck = parseFloat(document.getElementById("g-ck").value);
+  const txArr = txRaw.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+
+  const subj = appData.subjects.find(s => s.name === subjectName);
+  if (!subj) return;
+  if (!subj.semesters) subj.semesters = {};
+  if (!subj.semesters[sem]) subj.semesters[sem] = { tx:[], gk:null, ck:null };
+  subj.semesters[sem].tx = txArr;
+  subj.semesters[sem].gk = isNaN(gk) ? null : gk;
+  subj.semesters[sem].ck = isNaN(ck) ? null : ck;
+  saveData();
+
+  const avg = calcSubjectAvg(subj.semesters[sem]);
+  toast(`✅ Đã lưu ${subjectName} — ${sem}${avg !== null ? ` | TB = ${avg.toFixed(2)}` : ""}`, "success");
+
+  // Check if below goal
+  if (subj.goal && avg !== null && avg < subj.goal) {
+    const gap = (subj.goal - avg).toFixed(2);
+    toast(`⚠️ ${subjectName} còn cách mục tiêu ${gap} điểm! Cần cải thiện ${avg < 8 ? "GK và CK" : "TX"} 💪`, "warn");
+  }
+
+  renderDashboard();
+  renderGoals();
+  renderCompare();
+  renderChartsPage();
+}
+
+function clearGradeForm() {
+  document.getElementById("g-tx").value = "";
+  document.getElementById("g-gk").value = "";
+  document.getElementById("g-ck").value = "";
+  document.getElementById("live-preview").textContent = "TB = —";
+}
+
+function loadExistingGrades() {
+  const subjectName = document.getElementById("g-subject").value;
+  const sem = document.getElementById("g-sem").value;
+  if (!subjectName) { clearGradeForm(); return; }
+  const subj = appData.subjects.find(s => s.name === subjectName);
+  if (!subj || !subj.semesters?.[sem]) { clearGradeForm(); return; }
+  const d = subj.semesters[sem];
+  document.getElementById("g-tx").value = (d.tx||[]).join(", ");
+  document.getElementById("g-gk").value = d.gk ?? "";
+  document.getElementById("g-ck").value = d.ck ?? "";
+  calcLivePreview();
+}
+
+// =============================================
+// SUBJECT MANAGEMENT
+// =============================================
+function addSubject() {
+  const name = document.getElementById("new-subject-name").value.trim();
+  if (!name) { toast("Nhập tên môn đi bro!", "warn"); return; }
+  if (appData.subjects.find(s => s.name === name)) { toast("Môn này đã có rồi!", "warn"); return; }
+  appData.subjects.push({ name, semesters: { HK1:{tx:[],gk:null,ck:null}, HK2:{tx:[],gk:null,ck:null} }, goal: null });
+  saveData();
+  document.getElementById("new-subject-name").value = "";
+  populateSubjectSelects();
+  renderSubjectList();
+  renderGoals();
+  toast(`✅ Thêm môn "${name}" thành công!`, "success");
+}
+
+function removeSubject(name) {
+  if (!confirm(`Xóa môn "${name}"? Điểm của môn này cũng bị xóa!`)) return;
+  appData.subjects = appData.subjects.filter(s => s.name !== name);
+  saveData();
+  populateSubjectSelects();
+  renderSubjectList();
+  renderDashboard();
+  renderGoals();
+}
+
+function renderSubjectList() {
+  const el = document.getElementById("subject-list");
+  if (!appData.subjects.length) { el.innerHTML = `<div style="color:var(--text3); font-size:12px; font-family:var(--font-mono)">Chưa có môn học nào.</div>`; return; }
+  el.innerHTML = appData.subjects.map(s => `
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
+      <span style="font-size:13px; font-weight:600;">${s.name}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeSubject('${s.name}')">🗑️</button>
+    </div>`).join("");
+}
+
+// =============================================
+// DASHBOARD
+// =============================================
+function renderDashboard() {
+  renderStatsGrid();
+  renderSubjectAvgTable();
+  renderUpcomingExams();
+  renderFocusSuggestions();
+}
+
+function renderStatsGrid() {
+  const avg = calcOverallAvg(currentSemester);
+  const rank = getRank(avg);
+  const total = appData.subjects.filter(s => calcSubjectAvg(s.semesters?.[currentSemester]) !== null).length;
+  const below = appData.subjects.filter(s => {
+    const a = calcSubjectAvg(s.semesters?.[currentSemester]);
+    return s.goal && a !== null && a < s.goal;
+  }).length;
+  const upcoming = getUpcomingExams(7).length;
+
+  document.getElementById("stats-grid").innerHTML = `
+    <div class="stat-card purple">
+      <div class="stat-label">TB tổng — ${currentSemester}</div>
+      <div class="stat-value purple">${avg !== null ? avg.toFixed(2) : "—"}</div>
+      <div class="stat-sub">${rank ? rank.label : "Chưa có điểm"}</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Môn có điểm</div>
+      <div class="stat-value green">${total}</div>
+      <div class="stat-sub">/ ${appData.subjects.length} môn</div>
+    </div>
+    <div class="stat-card pink">
+      <div class="stat-label">Dưới mục tiêu</div>
+      <div class="stat-value pink">${below}</div>
+      <div class="stat-sub">môn cần cải thiện</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Thi sắp tới</div>
+      <div class="stat-value yellow">${upcoming}</div>
+      <div class="stat-sub">trong 7 ngày tới</div>
+    </div>`;
+}
+
+function renderSubjectAvgTable() {
+  const el = document.getElementById("subject-avg-table");
+  const hasAny = appData.subjects.some(s => calcSubjectAvg(s.semesters?.[currentSemester]) !== null);
+  if (!hasAny) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">Chưa có dữ liệu</div><div class="empty-sub">Nhập điểm ở trang "Nhập điểm" nhé bro</div></div>`;
+    document.getElementById("rank-badge-dash").innerHTML = "";
+    return;
+  }
+
+  const overall = calcOverallAvg(currentSemester);
+  const rank = getRank(overall);
+  if (rank) {
+    document.getElementById("rank-badge-dash").innerHTML = `<span class="rank-badge ${rank.cls}">⭐ ${rank.short}</span>`;
+  }
+
+  el.innerHTML = `<table class="subject-table">
+    <thead><tr>
+      <th>Môn</th><th>HK1</th><th>HK2</th><th>Cả năm</th><th>Mục tiêu</th>
+    </tr></thead>
+    <tbody>
+    ${appData.subjects.map(s => {
+      const hk1 = calcSubjectAvg(s.semesters?.HK1);
+      const hk2 = calcSubjectAvg(s.semesters?.HK2);
+      const year = calcYearAvg(s);
+      const cur = currentSemester === "HK1" ? hk1 : hk2;
+      const belowGoal = s.goal && cur !== null && cur < s.goal;
+      return `<tr style="${belowGoal ? "background:rgba(247,37,133,0.05);" : ""}">
+        <td class="subject-name-cell" style="${belowGoal ? "color:var(--accent4);" : ""}">${s.name}${belowGoal ? " ⚠️" : ""}</td>
+        <td>${getScoreBadge(hk1)}</td>
+        <td>${getScoreBadge(hk2)}</td>
+        <td>${getScoreBadge(year)}</td>
+        <td style="color:var(--text3); font-family:var(--font-mono); font-size:11px;">${s.goal ? s.goal.toFixed(1) : "—"}</td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>`;
+}
+
+function getUpcomingExams(days) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const limit = new Date(today); limit.setDate(limit.getDate() + days);
+  return (appData.exams || []).filter(e => {
+    const d = new Date(e.date); d.setHours(0,0,0,0);
+    return d >= today && d <= limit;
+  }).sort((a,b) => new Date(a.date) - new Date(b.date));
+}
+
+function renderUpcomingExams() {
+  const el = document.getElementById("upcoming-exams-dash");
+  const upcoming = getUpcomingExams(7);
+  if (!upcoming.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🗓️</div><div class="empty-title">Không có lịch thi</div><div class="empty-sub">Bro đang rảnh lắm 😄</div></div>`;
+    return;
+  }
+  el.innerHTML = upcoming.map(e => {
+    const d = new Date(e.date);
+    const day = d.getDate();
+    const month = d.toLocaleString("vi-VN", { month: "short" });
+    const diff = Math.ceil((d - new Date()) / 86400000);
+    return `<div class="exam-card urgent" style="margin-bottom:8px;">
+      <div class="exam-date-box"><div class="exam-date-day">${day}</div><div class="exam-date-month">${month}</div></div>
+      <div><div class="exam-info-name">${e.subject}</div><div class="exam-info-meta">${e.semester} · Còn ${diff} ngày</div></div>
+      <span class="exam-type-badge type-${e.type.toLowerCase()}">${e.type}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderFocusSuggestions() {
+  const el = document.getElementById("focus-suggestions");
+  const suggestions = appData.subjects.map(s => {
+    const avg = calcSubjectAvg(s.semesters?.[currentSemester]);
+    if (!s.goal || avg === null) return null;
+    const gap = s.goal - avg;
+    return { name: s.name, avg, goal: s.goal, gap };
+  }).filter(Boolean).sort((a,b) => b.gap - a.gap);
+
+  if (!suggestions.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Chưa có gợi ý</div><div class="empty-sub">Đặt mục tiêu điểm để xem gợi ý</div></div>`;
+    return;
+  }
+  el.innerHTML = suggestions.slice(0,5).map(s => {
+    const isOk = s.gap <= -0.5;
+    const isFocus = s.gap > 0 && s.gap < 0.5;
+    const badgeCls = isOk ? "priority-ok" : "priority-focus";
+    const badgeText = isOk ? "✅ Ổn rồi" : isFocus ? "🔥 Cần focus" : s.gap > 0 ? "⚠️ Chú ý" : "✅ Ổn rồi";
+    return `<div class="focus-item">
+      <div class="focus-gap">${s.gap > 0 ? "-"+s.gap.toFixed(1) : "+"+Math.abs(s.gap).toFixed(1)}</div>
+      <div><div class="focus-info-name">${s.name}</div><div class="focus-info-meta">TB: ${s.avg.toFixed(2)} / Mục tiêu: ${s.goal.toFixed(1)}</div></div>
+      <span class="priority-badge ${badgeCls}">${badgeText}</span>
+    </div>`;
+  }).join("");
+}
+
+// =============================================
+// GOALS PAGE
+// =============================================
+function renderGoals() {
+  const el = document.getElementById("goals-list");
+  if (!appData.subjects.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🎯</div><div class="empty-title">Chưa có môn học</div><div class="empty-sub">Thêm môn ở trang Nhập điểm trước nhé</div></div>`;
+    return;
+  }
+  el.innerHTML = appData.subjects.map((s, idx) => {
+    const avg = calcSubjectAvg(s.semesters?.[currentSemester]);
+    const goal = s.goal || 0;
+    const pct = goal > 0 && avg !== null ? Math.min(100, Math.round((avg / goal) * 100)) : 0;
+    const color = pct >= 100 ? "var(--accent3)" : pct >= 80 ? "var(--accent2)" : pct >= 60 ? "var(--accent5)" : "var(--accent4)";
+    const gap = goal > 0 && avg !== null ? (goal - avg).toFixed(2) : null;
+    return `<div class="goal-row">
+      <div class="goal-row-top">
+        <div class="goal-subject-name">${s.name}</div>
+        <div class="goal-scores" style="font-size:11px;">
+          ${avg !== null ? `TB ${currentSemester}: <strong style="color:${color}">${avg.toFixed(2)}</strong>` : `TB: —`}
+          ${goal > 0 ? ` / Mục tiêu: <strong style="color:var(--accent2)">${goal.toFixed(1)}</strong>` : ""}
+          ${gap !== null ? ` | Gap: <strong style="color:${parseFloat(gap) > 0 ? 'var(--accent4)':'var(--accent3)'}">${parseFloat(gap) > 0 ? '-':'+'+(Math.abs(parseFloat(gap)).toFixed(2))}</strong>` : ""}
+        </div>
+      </div>
+      <div class="goal-progress-row">
+        <div class="goal-progress-wrap"><div class="goal-progress-fill" style="width:${pct}%; background:${color};"></div></div>
+        <div class="goal-pct">${pct}%</div>
+      </div>
+      <div class="goal-input-row">
+        <label style="font-size:11px; color:var(--text3);">Đặt mục tiêu:</label>
+        <input class="goal-input" id="goal-inp-${idx}" type="number" step="0.1" min="0" max="10" value="${s.goal || ""}" placeholder="VD: 8.5" />
+        <button class="btn btn-primary btn-sm" onclick="saveGoal(${idx})">💾 Lưu</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function saveGoal(idx) {
+  const val = parseFloat(document.getElementById(`goal-inp-${idx}`).value);
+  if (isNaN(val) || val < 0 || val > 10) { toast("Mục tiêu từ 0–10 nhé bro!", "warn"); return; }
+  appData.subjects[idx].goal = val;
+  saveData();
+  renderGoals();
+  renderDashboard();
+  toast(`✅ Đặt mục tiêu ${appData.subjects[idx].name}: ${val}`, "success");
+}
+
+// =============================================
+// COMPARE PAGE
+// =============================================
+function renderCompare() {
+  renderCompareTable();
+  renderYearlyChart();
+}
+
+function renderCompareTable() {
+  const el = document.getElementById("compare-table-wrap");
+  const hasAny = appData.subjects.some(s =>
+    calcSubjectAvg(s.semesters?.HK1) !== null || calcSubjectAvg(s.semesters?.HK2) !== null
+  );
+  if (!hasAny) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">Chưa có dữ liệu</div><div class="empty-sub">Nhập điểm ở trang Nhập điểm trước</div></div>`;
+    return;
+  }
+  el.innerHTML = `<table class="compare-table">
+    <thead><tr><th>Môn</th><th>HK1</th><th>HK2</th><th>Cả năm</th><th>Xu hướng</th></tr></thead>
+    <tbody>
+    ${appData.subjects.map(s => {
+      const hk1 = calcSubjectAvg(s.semesters?.HK1);
+      const hk2 = calcSubjectAvg(s.semesters?.HK2);
+      const year = calcYearAvg(s);
+      let trend = "—", trendCls = "trend-same";
+      if (hk1 !== null && hk2 !== null) {
+        const pct = ((hk2 - hk1) / hk1 * 100).toFixed(1);
+        if (hk2 > hk1) { trend = `▲ +${pct}%`; trendCls = "trend-up"; }
+        else if (hk2 < hk1) { trend = `▼ ${pct}%`; trendCls = "trend-down"; }
+        else { trend = "→ 0%"; }
+      }
+      return `<tr>
+        <td style="font-family:var(--font-head); font-weight:700; font-size:13px; color:var(--text);">${s.name}</td>
+        <td>${getScoreBadge(hk1)}</td>
+        <td>${getScoreBadge(hk2)}</td>
+        <td>${getScoreBadge(year)}</td>
+        <td class="${trendCls}" style="font-size:12px; font-weight:700;">${trend}</td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>`;
+}
+
+function renderYearlyChart() {
+  const labels = appData.subjects.map(s => s.name);
+  const hk1Data = appData.subjects.map(s => calcSubjectAvg(s.semesters?.HK1));
+  const hk2Data = appData.subjects.map(s => calcSubjectAvg(s.semesters?.HK2));
+  const yearData = appData.subjects.map(s => calcYearAvg(s));
+
+  if (yearlyChartInstance) { yearlyChartInstance.destroy(); yearlyChartInstance = null; }
+  const ctx = document.getElementById("yearly-chart");
+  if (!ctx) return;
+
+  yearlyChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "HK1", data: hk1Data, backgroundColor: "rgba(124,106,247,0.5)", borderColor: "rgba(124,106,247,1)", borderWidth: 1, borderRadius: 4 },
+        { label: "HK2", data: hk2Data, backgroundColor: "rgba(6,214,160,0.5)", borderColor: "rgba(6,214,160,1)", borderWidth: 1, borderRadius: 4 },
+        { label: "Cả năm", data: yearData, backgroundColor: "rgba(255,209,102,0.5)", borderColor: "rgba(255,209,102,1)", borderWidth: 1, borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#9492a8", font: { family: "Space Mono", size: 11 } } } },
+      scales: {
+        x: { ticks: { color: "#5f5d72", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { min: 0, max: 10, ticks: { color: "#5f5d72", font: { family: "Space Mono", size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+      }
+    }
+  });
+}
+
+// =============================================
+// CHARTS PAGE
+// =============================================
+function renderChartsPage() {
+  renderSubjectChart();
+  renderCompareBarChart();
+  renderTrendTable();
+}
+
+function renderSubjectChart() {
+  const name = document.getElementById("chart-subject-sel").value;
+  const card = document.getElementById("subject-chart-card");
+  if (!name) {
+    card.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Chọn môn học</div><div class="empty-sub">để xem biểu đồ tiến trình điểm</div></div>`;
+    if (subjectChartInstance) { subjectChartInstance.destroy(); subjectChartInstance = null; }
+    return;
+  }
+  const subj = appData.subjects.find(s => s.name === name);
+  if (!subj) return;
+
+  const buildDatasets = () => {
+    const ds = [];
+    ["HK1","HK2"].forEach((hk, hi) => {
+      const sem = subj.semesters?.[hk];
+      if (!sem) return;
+      const tx = (sem.tx||[]).map((v,i) => ({ x: `TX${i+1} (${hk})`, y: parseFloat(v) || null }));
+      const pts = [...tx];
+      if (sem.gk !== null) pts.push({ x: `GK (${hk})`, y: sem.gk });
+      if (sem.ck !== null) pts.push({ x: `CK (${hk})`, y: sem.ck });
+      const colors = ["rgba(124,106,247,1)", "rgba(6,214,160,1)"];
+      const bgs = ["rgba(124,106,247,0.15)", "rgba(6,214,160,0.15)"];
+      ds.push({ label: hk, data: pts.map(p => p.y), borderColor: colors[hi], backgroundColor: bgs[hi], pointBackgroundColor: colors[hi], pointRadius: 5, tension: 0.3, fill: true });
+    });
+    return ds;
+  };
+
+  const hk1Points = [];
+  const hk1Sem = subj.semesters?.HK1;
+  if (hk1Sem) { (hk1Sem.tx||[]).forEach((_,i) => hk1Points.push(`TX${i+1}`)); if (hk1Sem.gk !== null) hk1Points.push("GK"); if (hk1Sem.ck !== null) hk1Points.push("CK"); }
+
+  card.innerHTML = `<div class="chart-wrap" style="height:280px;"><canvas id="subj-chart-canvas"></canvas></div>`;
+  if (subjectChartInstance) { subjectChartInstance.destroy(); subjectChartInstance = null; }
+  const ctx = document.getElementById("subj-chart-canvas");
+
+  const hk1 = subj.semesters?.HK1 || {};
+  const hk2 = subj.semesters?.HK2 || {};
+  const labels1 = [...(hk1.tx||[]).map((_,i) => `TX${i+1} HK1`), ...(hk1.gk !== null ? ["GK HK1"] : []), ...(hk1.ck !== null ? ["CK HK1"] : [])];
+  const labels2 = [...(hk2.tx||[]).map((_,i) => `TX${i+1} HK2`), ...(hk2.gk !== null ? ["GK HK2"] : []), ...(hk2.ck !== null ? ["CK HK2"] : [])];
+  const labels = [...labels1, ...labels2];
+  const d1 = [...(hk1.tx||[]).map(v => parseFloat(v)||null), ...(hk1.gk !== null ? [hk1.gk] : []), ...(hk1.ck !== null ? [hk1.ck] : [])];
+  const d2 = [...(hk2.tx||[]).map(v => parseFloat(v)||null), ...(hk2.gk !== null ? [hk2.gk] : []), ...(hk2.ck !== null ? [hk2.ck] : [])];
+  const maxLen = Math.max(d1.length, d2.length);
+
+  subjectChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "HK1", data: [...d1, ...Array(d2.length).fill(null)], borderColor: "rgba(124,106,247,1)", backgroundColor: "rgba(124,106,247,0.1)", pointRadius: 5, tension: 0.3, fill: true },
+        { label: "HK2", data: [...Array(d1.length).fill(null), ...d2], borderColor: "rgba(6,214,160,1)", backgroundColor: "rgba(6,214,160,0.1)", pointRadius: 5, tension: 0.3, fill: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#9492a8", font: { family: "Space Mono", size: 11 } } } },
+      scales: {
+        x: { ticks: { color: "#5f5d72", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { min: 0, max: 10, ticks: { color: "#5f5d72", font: { family: "Space Mono", size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+      }
+    }
+  });
+}
+
+function renderCompareBarChart() {
+  if (compareChartInstance) { compareChartInstance.destroy(); compareChartInstance = null; }
+  const ctx = document.getElementById("compare-chart");
+  if (!ctx) return;
+  const labels = appData.subjects.map(s => s.name);
+  const hk1 = appData.subjects.map(s => calcSubjectAvg(s.semesters?.HK1));
+  const hk2 = appData.subjects.map(s => calcSubjectAvg(s.semesters?.HK2));
+
+  compareChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "HK1", data: hk1, borderColor: "rgba(124,106,247,1)", backgroundColor: "rgba(124,106,247,0.1)", pointBackgroundColor: "rgba(124,106,247,1)", pointRadius: 5, tension: 0.3, fill: true },
+        { label: "HK2", data: hk2, borderColor: "rgba(6,214,160,1)", backgroundColor: "rgba(6,214,160,0.1)", pointBackgroundColor: "rgba(6,214,160,1)", pointRadius: 5, tension: 0.3, fill: true }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#9492a8", font: { family: "Space Mono", size: 11 } } } },
+      scales: {
+        x: { ticks: { color: "#5f5d72", font: { size: 10 }, maxRotation: 40 }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { min: 0, max: 10, ticks: { color: "#5f5d72", font: { family: "Space Mono", size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" } }
+      }
+    }
+  });
+}
+
+function renderTrendTable() {
+  const el = document.getElementById("trend-table-card");
+  const data = appData.subjects.map(s => {
+    const hk1 = calcSubjectAvg(s.semesters?.HK1);
+    const hk2 = calcSubjectAvg(s.semesters?.HK2);
+    if (hk1 === null || hk2 === null) return null;
+    const diff = hk2 - hk1;
+    const pct = (diff / hk1 * 100).toFixed(1);
+    return { name: s.name, hk1, hk2, diff, pct };
+  }).filter(Boolean);
+
+  if (!data.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📉</div><div class="empty-title">Chưa đủ dữ liệu</div><div class="empty-sub">Cần có điểm cả HK1 lẫn HK2</div></div>`;
+    return;
+  }
+  el.innerHTML = `<table class="compare-table">
+    <thead><tr><th>Môn</th><th>HK1</th><th>HK2</th><th>Thay đổi</th><th>% thay đổi</th></tr></thead>
+    <tbody>
+    ${data.map(d => {
+      const cls = d.diff > 0 ? "trend-up" : d.diff < 0 ? "trend-down" : "trend-same";
+      const arrow = d.diff > 0 ? "▲" : d.diff < 0 ? "▼" : "→";
+      return `<tr>
+        <td style="font-family:var(--font-head); font-weight:700; color:var(--text);">${d.name}</td>
+        <td>${getScoreBadge(d.hk1)}</td>
+        <td>${getScoreBadge(d.hk2)}</td>
+        <td class="${cls}" style="font-weight:700;">${arrow} ${d.diff >= 0 ? "+" : ""}${d.diff.toFixed(2)}</td>
+        <td class="${cls}" style="font-weight:700; font-family:var(--font-mono);">${d.diff >= 0 ? "+" : ""}${d.pct}%</td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>`;
+}
+
+// =============================================
+// CALENDAR
+// =============================================
+function addExam() {
+  const subject = document.getElementById("exam-subject").value;
+  const date = document.getElementById("exam-date").value;
+  const type = document.getElementById("exam-type").value;
+  const semester = document.getElementById("exam-sem").value;
+  if (!subject || !date) { toast("Chọn môn và ngày thi đi bro!", "warn"); return; }
+  if (!appData.exams) appData.exams = [];
+  appData.exams.push({ subject, date, type, semester });
+  appData.exams.sort((a,b) => new Date(a.date) - new Date(b.date));
+  saveData();
+  renderCalendar();
+  renderDashboard();
+  toast(`📅 Thêm lịch thi ${subject} (${type} - ${semester})`, "success");
+}
+
+function removeExam(idx) {
+  appData.exams.splice(idx, 1);
+  saveData();
+  renderCalendar();
+  renderDashboard();
+}
+
+function renderCalendar() {
+  renderExamTimeline();
+  renderExamList();
+}
+
+function renderExamTimeline() {
+  const el = document.getElementById("exam-timeline");
+  const exams = (appData.exams || []);
+  if (!exams.length) { el.innerHTML = `<div style="color:var(--text3); font-size:12px; font-family:var(--font-mono);">Chưa có lịch thi nào.</div>`; return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  el.innerHTML = exams.map(e => {
+    const d = new Date(e.date); d.setHours(0,0,0,0);
+    const isUpcoming = d >= today && d <= new Date(today.getTime() + 7*86400000);
+    const dayStr = d.toLocaleDateString("vi-VN", { day:"2-digit", month:"2-digit" });
+    const cls = e.type === "GK" ? "tl-gk" : e.type === "CK" ? "tl-ck" : "tl-tx";
+    return `<div class="timeline-stop">
+      <div class="timeline-dot ${cls} ${isUpcoming ? "tl-upcoming" : ""}">${e.type}</div>
+      <div class="timeline-label">${e.subject.split(" ")[0]}</div>
+      <div class="timeline-date">${dayStr}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderExamList() {
+  const el = document.getElementById("exam-list");
+  const exams = appData.exams || [];
+  if (!exams.length) { el.innerHTML = `<div style="color:var(--text3); font-size:12px; font-family:var(--font-mono);">Chưa có lịch thi nào.</div>`; return; }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  el.innerHTML = exams.map((e, idx) => {
+    const d = new Date(e.date);
+    const day = d.getDate();
+    const month = d.toLocaleString("vi-VN", { month: "short" });
+    const diff = Math.ceil((d - today) / 86400000);
+    const isUrgent = diff >= 0 && diff <= 7;
+    return `<div class="exam-card${isUrgent ? " urgent" : ""}" style="margin-bottom:8px;">
+      <div class="exam-date-box"><div class="exam-date-day">${day}</div><div class="exam-date-month">${month}</div></div>
+      <div style="flex:1;">
+        <div class="exam-info-name">${e.subject}</div>
+        <div class="exam-info-meta">${e.semester} · ${diff >= 0 ? "Còn "+diff+" ngày" : "Đã qua"}</div>
+      </div>
+      <span class="exam-type-badge type-${e.type.toLowerCase()}">${e.type}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeExam(${idx})">🗑️</button>
+    </div>`;
+  }).join("");
+}
+
+// =============================================
+// IMPORT / EXPORT
+// =============================================
+function exportExcel() {
+  const rows = [["Môn","HK","TX1","TX2","TX3","TX4","GK","CK","TB"]];
+  appData.subjects.forEach(s => {
+    ["HK1","HK2"].forEach(hk => {
+      const sem = s.semesters?.[hk] || {};
+      const tx = sem.tx || [];
+      const avg = calcSubjectAvg(sem);
+      rows.push([s.name, hk, tx[0]||"", tx[1]||"", tx[2]||"", tx[3]||"", sem.gk||"", sem.ck||"", avg !== null ? avg.toFixed(2) : ""]);
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Điểm số");
+  XLSX.writeFile(wb, `BangDiem_${appData.student.name || "HocSinh"}.xlsx`);
+  toast("📤 Đã xuất Excel!", "success");
+}
+
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+      let count = 0;
+      rows.slice(1).forEach(row => {
+        const [name, hk, tx1, tx2, tx3, tx4, gk, ck] = row;
+        if (!name || !hk) return;
+        let subj = appData.subjects.find(s => s.name === name);
+        if (!subj) { subj = { name, semesters:{HK1:{tx:[],gk:null,ck:null},HK2:{tx:[],gk:null,ck:null}}, goal:null }; appData.subjects.push(subj); }
+        if (!subj.semesters[hk]) subj.semesters[hk] = { tx:[], gk:null, ck:null };
+        subj.semesters[hk].tx = [tx1,tx2,tx3,tx4].map(v => parseFloat(v)).filter(v => !isNaN(v));
+        subj.semesters[hk].gk = parseFloat(gk) || null;
+        subj.semesters[hk].ck = parseFloat(ck) || null;
+        count++;
+      });
+      saveData();
+      populateSubjectSelects();
+      renderDashboard(); renderGoals(); renderCompare(); renderSubjectList();
+      toast(`✅ Import thành công ${count} dòng!`, "success");
+    } catch(err) { toast("❌ Lỗi đọc file Excel!", "danger"); }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = "";
+}
+
+function exportPDF() {
+  toast("📄 Đang tạo PDF...", "info");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const s = appData.student;
+  doc.setFontSize(18);
+  doc.text("BẢNG ĐIỂM HỌC SINH", 105, 20, { align: "center" });
+  doc.setFontSize(11);
+  doc.text(`Họ tên: ${s.name}   Lớp: ${s.class}   Trường: ${s.school}`, 20, 32);
+  doc.text(`Ngày xuất: ${new Date().toLocaleDateString("vi-VN")}`, 20, 40);
+  doc.line(20, 44, 190, 44);
+
+  let y = 52;
+  doc.setFontSize(10);
+  doc.text("Môn", 20, y); doc.text("HK1", 80, y); doc.text("HK2", 110, y); doc.text("Cả năm", 140, y); doc.text("Mục tiêu", 165, y);
+  y += 4; doc.line(20, y, 190, y); y += 6;
+
+  appData.subjects.forEach(s => {
+    const hk1 = calcSubjectAvg(s.semesters?.HK1);
+    const hk2 = calcSubjectAvg(s.semesters?.HK2);
+    const year = calcYearAvg(s);
+    doc.text(s.name, 20, y);
+    doc.text(hk1 !== null ? hk1.toFixed(2) : "—", 80, y);
+    doc.text(hk2 !== null ? hk2.toFixed(2) : "—", 110, y);
+    doc.text(year !== null ? year.toFixed(2) : "—", 140, y);
+    doc.text(s.goal ? s.goal.toFixed(1) : "—", 165, y);
+    y += 8;
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+
+  doc.line(20, y, 190, y); y += 8;
+  const overall = calcOverallAvg("year");
+  const rank = getRank(overall);
+  doc.setFontSize(12);
+  doc.text(`TB cả năm: ${overall !== null ? overall.toFixed(2) : "—"}   Xếp loại: ${rank ? rank.label : "—"}`, 20, y);
+  doc.save(`BaoCaoDiem_${s.name || "HocSinh"}.pdf`);
+  toast("✅ Đã xuất PDF!", "success");
+}
+
+// =============================================
+// PAGE NAVIGATION
+// =============================================
+const pageTitles = { dashboard:"Dashboard", grades:"Nhập điểm", charts:"Biểu đồ & Báo cáo", goals:"Mục tiêu điểm", compare:"So sánh học kỳ", calendar:"Lịch kiểm tra" };
+
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById(`page-${name}`).classList.add("active");
+  document.querySelector(`[data-page="${name}"]`).classList.add("active");
+  document.getElementById("page-title").textContent = pageTitles[name] || name;
+  if (name === "charts") { setTimeout(renderChartsPage, 100); }
+  if (name === "compare") { setTimeout(renderCompare, 100); }
+  // Close sidebar on mobile
+  if (window.innerWidth <= 768) document.getElementById("sidebar").classList.remove("open");
+}
+
+function setSemester(sem) {
+  currentSemester = sem;
+  document.getElementById("sem-hk1").classList.toggle("active", sem === "HK1");
+  document.getElementById("sem-hk2").classList.toggle("active", sem === "HK2");
+  document.getElementById("g-sem").value = sem;
+  renderDashboard();
+  renderGoals();
+  renderFocusSuggestions();
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+}
+
+// =============================================
+// TOAST
+// =============================================
+function toast(msg, type = "info") {
+  const container = document.getElementById("toast-container");
+  const el = document.createElement("div");
+  const icons = { success:"✅", warn:"⚠️", danger:"❌", info:"ℹ️" };
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||"ℹ️"}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateX(100%)"; el.style.transition = "0.3s"; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// =============================================
+// BOOT
+// =============================================
+window.addEventListener("DOMContentLoaded", checkOnboarding);
+</script>
+</body>
+</html>

@@ -1,108 +1,211 @@
-import os                           # Thư viện để chạy lệnh hệ thống (vd: clear màn hình)
-import shutil                       # Lấy kích thước terminal để căn giữa
-import time                         # Tạo độ trễ (sleep)
-import sys                          # Thoát chương trình
-from datetime import datetime       #Lấy thời gian hiện tại
-from prettytable import prettytable #LÀM CÁI BẢNG ĐẸP =))
+import os
+import shutil
+import time
+import sys
+from datetime import datetime
+from prettytable import PrettyTable
+import matplotlib.pyplot as plt
 
+width = shutil.get_terminal_size().columns
+# ================== CHECK FOR EXISTED ============
+def checking_for_exists(subject):
+    try: 
+        with open("sessions.txt", "r", encoding="utf-8") as file: 
+            for line in file: 
+                if not line.strip():
+                    continue
+                
+                saved_subject, _ = line.strip().split("|")
+                
+                if saved_subject.lower() == subject.lower():
+                    return True   # 🔥 TRẢ VỀ NGAY
 
-width = shutil.get_terminal_size().columns  # Lấy chiều rộng terminal
-os.system("cls")  # Xoá màn hình (Windows)
+    except FileNotFoundError:
+        return False
 
-
+    return False
+        
+               
+# ================== ADD SESSION ==================
 def add_sessions():
-    # ================== ADD SUBJECT ===============
     while True:
         print("Enter your Subject".center(width))
-        subjectINPUT = input(">>>")
+        subject = input(">>>").strip()
+       
 
-        #No space
-        if " " in subjectINPUT:
-            print(f"{subjectINPUT} should not containing space!")
-            enter = input()
+        if subject == "" or " " in subject:
+            print("Subject must not be empty or contain spaces!")
+            input()
             os.system("cls")
 
-        else: 
-            break
-
-    # ================== ADD learningTIME ===============
+        if checking_for_exists(subject):
+            os.system("cls")
+            print("❌ Subject already exists!".center(width))
+            input()
+            os.system("cls")
+            continue
+        
+        break
 
     while True:
-            print(f"Enter your time for subject '{subjectINPUT}'")
-            learningtime = input(">>>")
+        print(f"Enter time for '{subject}' (minutes)")
+        try:
+            minutes = int(input(">>>"))
+            break
+        except ValueError:
+            print("Must be a number!")
+            time.sleep(1)
+            os.system("cls")
 
-            try:
-                learningtime = int(learningtime) 
-                break
-            except ValueError:  # Nếu nhập không phải số
-                print("Time must be a number!")
-                time.sleep(1)
-                os.system("cls")
-    
     with open("sessions.txt", "a", encoding="utf-8") as file:
-        file.write(f"{subjectINPUT}-{learningtime}\n")
-    
+        file.write(f"{subject}|{minutes}\n")
 
-    print(f"Added {subjectINPUT} --- Using {learningtime}")
-    print("Expense added successfully!")
-    enter=input()
+    print(f"Added: {subject} | {minutes} min")
+    input()
     os.system("cls")
 
-
-from prettytable import PrettyTable
-
-def view_sessions():
+#================== DELETE ================
+def del_sessions():
     try: 
         table = PrettyTable()
         table.field_names = ["Subject", "Time"]
+
+        sessions = []
+        
         with open("sessions.txt", "r", encoding="utf-8") as file: 
             for line in file: 
-                if not line:
+                if not line.strip():
                     continue
 
-                parts = line.split("-")
-                if len(parts) != 2:
-                    continue
-                
-                subject, learningtime = parts
-                learningtime = int(learningtime.strip())
+                subject, minutes = line.strip().split("|")
+                sessions.append((subject, minutes))
+                table.add_row([subject, int(minutes)])
+            print(table)
+        # Questioning user 
+            del_subject = input("Enter name of subject to remove: ")
 
-                table.add_row([subject, learningtime])
+
+        #Resolve the list(remove)
+        new_sessions = []
+        found = False
+
+        for subject, minutes in sessions: 
+            if subject.lower() != del_subject.lower():
+                new_sessions.append((subject, minutes))
+            else: 
+                found = True 
+        if not found: 
+            print("❌ Subject not found!")
+        elif found: 
+            #rewrite the file
+            with open("sessions.txt", "w", encoding="utf-8") as file: 
+                for subject, minutes in new_sessions:
+                    file.write(f"{subject}|{minutes}\n")
+            print("✅ Deleted successfully!")
+    except FileNotFoundError:
+        print("File doesn't exist!")
+        input()
+
+            
+
+# ================== VIEW ==================
+def view_sessions():
+    try:
+        table = PrettyTable()
+        table.field_names = ["Subject", "Time"]
+
+        with open("sessions.txt", "r", encoding="utf-8") as file:
+            for line in file:
+                if not line.strip():
+                    continue
+
+                subject, minutes = line.strip().split("|")
+                table.add_row([subject, int(minutes)])
 
         print(table)
         input()
 
     except FileNotFoundError:
-        print("No data found")
-
-
-while True:
-    print("_____________________".center(width))
-    print(("Time: " + datetime.now().strftime("%H:%M:%S")).center(width))
-    print("Welcome to the Family Expense Tracking System!".center(width))
-    print("(1) Add sessions")
-    print("(2) View sessions")
-    print("(3) Exit")
-
-
-    choice = input("My choice: ")
-
-    if choice == "1":
-        os.system("cls")
-        print("Loading...".center(width))
-        time.sleep(1)
-        os.system("cls")
-        add_sessions()
-
-    elif choice == "2":
-        os.system("cls")
-        print("Loading...".center(width))
-        time.sleep(1)
-        os.system("cls")
-        view_sessions()
-    
-    elif choice == "3":
-        os.system("cls")
-        print("Goodbye! See you next time.".center(width))
+        print("No data yet 😴")
         input()
-        sys.exit()  # Thoát chương trình
+
+
+# ================== STATS + GRAPH ==================
+def stats():
+    subjects = {}
+
+    try:
+        with open("sessions.txt", "r", encoding="utf-8") as file:
+            for line in file:
+                if not line.strip():
+                    continue
+
+                subject, minutes = line.strip().split("|")
+                minutes = int(minutes)
+
+                if subject in subjects:
+                    subjects[subject] += minutes
+                else:
+                    subjects[subject] = minutes
+
+        if not subjects:
+            print("No data for graph 😴")
+            input()
+            return
+
+        x = list(subjects.keys())
+        y = list(subjects.values())
+
+        plt.bar(x, y)
+
+        plt.title("Study Progress")
+        plt.xlabel("Subjects")
+        plt.ylabel("Minutes")
+
+        plt.show()
+
+    except FileNotFoundError:
+        print("No sessions found 😭")
+        input()
+
+
+# ================== MENU ==================
+def menu():
+    while True:
+        print("_____________________".center(width))
+        print(("Time: " + datetime.now().strftime("%H:%M:%S")).center(width))
+        print("Study Tracker".center(width))
+        print("(1) Add session")
+        print("(2) View sessions")
+        print("(3) Show graph stats")
+        print("(4) Delete sessions")
+        print("(5) Exit")
+
+        choice = input(">>> ")
+
+        if choice == "1":
+            os.system("cls")
+            add_sessions()
+
+        elif choice == "2":
+            os.system("cls")
+            view_sessions()
+
+        elif choice == "3":
+            os.system("cls")
+            stats()
+        elif choice == "4":
+            os.system("cls")
+            del_sessions()
+
+        elif choice == "5":
+            print("Bye 👋")
+            sys.exit()
+
+        else:
+            print("Invalid choice")
+            time.sleep(1)
+            os.system("cls")
+
+
+menu()
